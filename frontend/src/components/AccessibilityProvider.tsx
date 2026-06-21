@@ -50,6 +50,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
           userId = crypto.randomUUID();
           localStorage.setItem('saathi_user_id', userId);
         }
+        console.log(`[DIAGNOSTIC] Loading preferences for user ID: ${userId}`);
         prefs.setUserId(userId);
 
         // Boot up telemetry with current active session
@@ -62,6 +63,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
         const localPref = await db.preferences.where('user_id').equals(userId).first();
         
         if (localPref) {
+          console.log(`[DIAGNOSTIC] Local preferences found in IndexedDB:`, localPref);
           prefs.updatePreference('speechRate', localPref.speech_rate);
           prefs.updatePreference('speechVolume', localPref.speech_volume);
           prefs.updatePreference('textScale', localPref.text_scale);
@@ -74,6 +76,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
           applyTheme(localPref.high_contrast === 1 ? 'high-contrast-dark' : 'standard');
           document.documentElement.style.fontSize = `${localPref.text_scale * 100}%`;
         } else {
+          console.log(`[DIAGNOSTIC] Local preferences not found in IndexedDB. Initializing default preferences.`);
           // Check system media query for reduced motion
           const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
           if (motionQuery.matches) {
@@ -94,7 +97,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
           });
         }
       } catch (err) {
-        console.error('Failed to load accessibility preferences:', err);
+        console.error('[DIAGNOSTIC] Failed to load accessibility preferences:', err);
       } finally {
         setIsLoading(false);
       }
@@ -154,10 +157,13 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
         preferred_voice: prefs.preferredVoice,
         preferred_language: prefs.preferredLanguage,
       };
+      console.log(`[DIAGNOSTIC] Preferences sync started for User ID: ${prefs.userId}`);
       await api.put('/api/users/preferences/', payload, {
         'X-User-ID': prefs.userId,
       });
+      console.log(`[DIAGNOSTIC] Preferences sync success for User ID: ${prefs.userId}`);
     } catch (err) {
+      console.error(`[DIAGNOSTIC] Preferences sync failure for User ID: ${prefs.userId}:`, err);
       console.warn('Failed to sync preferences to backend:', err);
     }
   };

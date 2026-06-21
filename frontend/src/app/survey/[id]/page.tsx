@@ -69,23 +69,47 @@ export default function ActiveSurveyPage() {
     async function loadSurvey() {
       try {
         setLoading(true);
+        console.log(`[DIAGNOSTIC] Survey fetch started for ID: ${surveyId}`);
         const data = await loadSurveyDefinition(surveyId);
+        console.log(`[DIAGNOSTIC] Survey fetch success for ID: ${surveyId}. Title: "${data.title}", Questions: ${data.questions.length}`);
         setSurvey(data);
         if (data.questions.length > 0) {
+          console.log(`[DIAGNOSTIC] Initializing survey FSM with surveyId: ${data.id}, firstQuestionId: ${data.questions[0].id}`);
           initializeSurvey(data.id, data.questions[0].id);
+          
+          // Auto-start survey FSM from IDLE to LANGUAGE_SELECTION
+          const freshState = useSurveyStore.getState().currentState;
+          if (freshState === 'IDLE') {
+            console.log(`[DIAGNOSTIC] FSM is IDLE. Dispatching START_SURVEY.`);
+            send({ type: 'START_SURVEY' });
+          }
         }
       } catch (err) {
+        console.error(`[DIAGNOSTIC] Survey fetch failed for ID: ${surveyId}:`, err);
         console.warn("Failed to load remote survey. Using local demo survey fallback.", err);
         setSurvey(demoSurvey);
         initializeSurvey(demoSurvey.id, demoSurvey.questions[0].id);
+        
+        // Auto-start survey FSM from IDLE to LANGUAGE_SELECTION for fallback
+        const freshState = useSurveyStore.getState().currentState;
+        if (freshState === 'IDLE') {
+          console.log(`[DIAGNOSTIC] FSM is IDLE after fallback initialization. Dispatching START_SURVEY.`);
+          send({ type: 'START_SURVEY' });
+        }
       } finally {
         setLoading(false);
+        console.log(`[DIAGNOSTIC] Survey initialization completion. Loading state set to false.`);
       }
     }
     if (surveyId) {
       loadSurvey();
     }
-  }, [surveyId, initializeSurvey]);
+  }, [surveyId, initializeSurvey, send]);
+
+  // Log FSM state transitions
+  useEffect(() => {
+    console.log(`[DIAGNOSTIC] FSM state updated. CurrentState: "${currentState}", currentQuestionId: "${currentQuestionId}"`);
+  }, [currentState, currentQuestionId]);
 
   // 2. Resolve active question
   const activeQuestion = survey?.questions.find((q) => q.id === currentQuestionId) || null;
