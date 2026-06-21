@@ -2,8 +2,8 @@ import Dexie, { type Table } from 'dexie';
 
 export interface LocalSurvey {
   id: string;
-  title: string;
-  description: string;
+  title: any;
+  description: any;
   is_active: number; // Indexable boolean equivalent (0 or 1)
   default_language: string;
 }

@@ -47,8 +47,8 @@ export interface QuestionDefinition {
 
 export interface SurveyDefinition {
   id: string;
-  title: string;
-  description: string;
+  title: TranslationText | string;
+  description: TranslationText | string;
   is_active: boolean;
   default_language: string;
   questions: QuestionDefinition[];

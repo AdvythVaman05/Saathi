@@ -3,8 +3,8 @@ from django.db import models
 
 class Survey(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField(max_length=255)
-    description = models.TextField()
+    title = models.JSONField() # JSONField for localized survey title
+    description = models.JSONField() # JSONField for localized survey description
     is_active = models.BooleanField(default=True)
     default_language = models.CharField(max_length=10, default='en')
     created_at = models.DateTimeField(auto_now_add=True)
