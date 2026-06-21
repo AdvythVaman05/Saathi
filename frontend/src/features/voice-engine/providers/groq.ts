@@ -33,6 +33,7 @@ export class GroqSpeechRecognitionProvider implements SpeechRecognitionProvider 
   }
 
   async startListening(): Promise<void> {
+    console.log("[DIAGNOSTIC] Groq provider: startListening called. Initializing chunks.");
     this.isListening = true;
     this.recordedChunks = [];
     this.handlers.onStart?.();
@@ -43,17 +44,28 @@ export class GroqSpeechRecognitionProvider implements SpeechRecognitionProvider 
 
     // Subscribe to AudioCaptureService at Whisper's target rate of 16kHz
     const capturer = AudioCaptureService.getInstance();
+    console.log("[DIAGNOSTIC] Groq provider: Subscribing to AudioCaptureService.");
     capturer.subscribe('groq-recognition', (data) => {
       if (this.isListening) {
         this.recordedChunks.push(data.resampledFloat32);
       }
     }, 16000);
 
-    await capturer.startCapture();
+    try {
+      await capturer.startCapture();
+      console.log("[DIAGNOSTIC] Groq provider: Microphone capture started successfully.");
+    } catch (err) {
+      console.error("[DIAGNOSTIC] Groq provider: Microphone capture failed to start:", err);
+      throw err;
+    }
   }
 
   async stopListening(): Promise<void> {
-    if (!this.isListening) return;
+    if (!this.isListening) {
+      console.log("[DIAGNOSTIC] Groq provider: stopListening called but provider is not listening.");
+      return;
+    }
+    console.log("[DIAGNOSTIC] Groq provider: stopListening called. Stopping capture.");
     this.isListening = false;
 
     if (this.isTesting) {
@@ -74,7 +86,9 @@ export class GroqSpeechRecognitionProvider implements SpeechRecognitionProvider 
 
     // Compile recorded chunks
     const totalLength = this.recordedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    console.log(`[DIAGNOSTIC] Groq provider: Captured ${this.recordedChunks.length} chunks. Total samples: ${totalLength}`);
     if (totalLength === 0) {
+      console.warn("[DIAGNOSTIC] Groq provider: Total compiled audio length is 0. Ending recognition.");
       this.handlers.onEnd?.();
       return;
     }
@@ -104,6 +118,7 @@ export class GroqSpeechRecognitionProvider implements SpeechRecognitionProvider 
       const formData = new FormData();
       formData.append('audio', wavBlob, 'audio.wav');
 
+      console.log(`[DIAGNOSTIC] Groq provider: Uploading audio blob of size ${wavBlob.size} bytes to ${url}`);
       const response = await fetch(url, {
         method: 'POST',
         body: formData,
@@ -114,15 +129,18 @@ export class GroqSpeechRecognitionProvider implements SpeechRecognitionProvider 
       }
 
       const data = await response.json();
+      console.log("[DIAGNOSTIC] Groq provider: Transcription response payload:", data);
       const result: SpeechRecognitionResult = {
         transcript: data.transcript || '',
         confidence: data.confidence || 0.95,
         isFinal: true,
       };
 
+      console.log(`[DIAGNOSTIC] Groq provider: Resolved transcript: "${result.transcript}", confidence: ${result.confidence}`);
       this.handlers.onResult?.(result);
 
     } catch (e: any) {
+      console.error("[DIAGNOSTIC] Groq provider: Upload/transcription failed:", e);
       console.warn("Groq transcription error:", e);
       this.handlers.onError?.(e);
     } finally {

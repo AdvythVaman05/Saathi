@@ -170,6 +170,8 @@ export default function ActiveSurveyPage() {
     const nextId = getNextQuestionId(activeQuestion, survey.questions, value);
     const hasNext = nextId !== null;
 
+    console.log(`[DIAGNOSTIC] handleSaveAnswer: value="${value}", activeQuestionId="${activeQuestion.id}", nextId="${nextId}", hasNext=${hasNext}`);
+
     // Save locally to IndexedDB immediately, syncs to API
     await persistAnswer({
       session_id: sessionId,
@@ -179,6 +181,7 @@ export default function ActiveSurveyPage() {
       confidence_score: transcriptionConfidence || 1.0,
     });
 
+    console.log(`[DIAGNOSTIC] handleSaveAnswer: dispatching CONFIRM_YES with nextQuestionId="${nextId}"`);
     send({
       type: 'CONFIRM_YES',
       payload: {
@@ -194,6 +197,8 @@ export default function ActiveSurveyPage() {
     const nextId = getNextQuestionId(activeQuestion, survey.questions, value);
     const hasNext = nextId !== null;
 
+    console.log(`[DIAGNOSTIC] handleSaveManualAnswer: value="${value}", activeQuestionId="${activeQuestion.id}", nextId="${nextId}", hasNext=${hasNext}`);
+
     await persistAnswer({
       session_id: sessionId,
       question_id: activeQuestion.id,
@@ -202,6 +207,7 @@ export default function ActiveSurveyPage() {
       confidence_score: 1.0,
     });
 
+    console.log(`[DIAGNOSTIC] handleSaveManualAnswer: dispatching SUBMIT_MANUAL with nextQuestionId="${nextId}"`);
     send({
       type: 'SUBMIT_MANUAL',
       payload: {
@@ -215,6 +221,8 @@ export default function ActiveSurveyPage() {
   const handleSpeechResult = useCallback((transcript: string, confidence: number) => {
     if (!activeQuestion || !survey) return;
 
+    console.log(`[DIAGNOSTIC] handleSpeechResult: transcript="${transcript}", confidence=${confidence}, currentState="${currentState}"`);
+
     // A. Yes/No Confirmation parsing
     if (currentState === 'CONFIRMING') {
       const yesTerms = ['yes', 'correct', 'yeah', 'confirm', 'हाँ', 'हाँजी', 'అవును', 'avunu'];
@@ -224,12 +232,17 @@ export default function ActiveSurveyPage() {
       const isYes = yesTerms.some(term => norm.includes(term));
       const isNo = noTerms.some(term => norm.includes(term));
 
+      console.log(`[DIAGNOSTIC] handleSpeechResult CONFIRMING: norm="${norm}", isYes=${isYes}, isNo=${isNo}`);
+
       if (isYes && !isNo) {
+        console.log(`[DIAGNOSTIC] handleSpeechResult CONFIRMING: Confirming Yes. Saving candidateAnswer="${candidateAnswer}"`);
         handleSaveAnswer(candidateAnswer);
       } else if (isNo && !isYes) {
+        console.log(`[DIAGNOSTIC] handleSpeechResult CONFIRMING: Confirming No. Dispatching CONFIRM_NO.`);
         send({ type: 'CONFIRM_NO' });
       } else {
         // Did not understand confirmation -> trigger recovery state
+        console.warn(`[DIAGNOSTIC] handleSpeechResult CONFIRMING: Confirmation not understood. Dispatching TIMEOUT.`);
         send({ type: 'TIMEOUT' });
       }
       return;
@@ -240,6 +253,7 @@ export default function ActiveSurveyPage() {
     const cmdResult = commandProcessor.processTranscript(transcript);
 
     if (cmdResult.isCommand) {
+      console.log(`[DIAGNOSTIC] handleSpeechResult command matched: "${cmdResult.commandToken}"`);
       if (cmdResult.commandToken === 'repeat') {
         send({ type: 'GO_BACK', payload: { previousQuestionId: activeQuestion.id } });
       } else if (cmdResult.commandToken === 'back') {
@@ -275,15 +289,19 @@ export default function ActiveSurveyPage() {
     }
 
     // C. Question Answer parsing
+    console.log(`[DIAGNOSTIC] handleSpeechResult: Dispatching FINISH_LISTENING.`);
     send({ type: 'FINISH_LISTENING' }); // Transitions to PROCESSING
 
     const parsed = parseVoiceAnswer(activeQuestion, transcript, currentLanguage);
     const validation = validateAnswer(activeQuestion, parsed.value);
 
+    console.log(`[DIAGNOSTIC] handleSpeechResult parsing: parsedValue="${parsed.value}", parsedConfidence=${parsed.confidence}, isValid=${validation.isValid}, error="${validation.error || ''}"`);
+
     if (validation.isValid && parsed.value !== null && parsed.value !== undefined) {
       // Play confirmation sound cue
       window.dispatchEvent(new CustomEvent('saathi-audio-cue', { detail: { type: 'SUCCESS' } }));
       
+      console.log(`[DIAGNOSTIC] handleSpeechResult parsing success: dispatching RESOLVE_TRANSCRIPTION with transcript="${String(parsed.value)}"`);
       send({
         type: 'RESOLVE_TRANSCRIPTION',
         payload: {
@@ -294,6 +312,7 @@ export default function ActiveSurveyPage() {
     } else {
       // Failed to match valid answer -> trigger recovery rephrase flow
       window.dispatchEvent(new CustomEvent('saathi-audio-cue', { detail: { type: 'ALERT' } }));
+      console.warn(`[DIAGNOSTIC] handleSpeechResult parsing failure: dispatching RESOLVE_TRANSCRIPTION with empty transcript to trigger RECOVERY`);
       send({
         type: 'RESOLVE_TRANSCRIPTION',
         payload: {
@@ -401,7 +420,8 @@ export default function ActiveSurveyPage() {
   // VAD and Watchdog integration
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (currentState === 'LISTENING' && isSelfGuided) {
+    if ((currentState === 'LISTENING' || currentState === 'CONFIRMING') && isSelfGuided) {
+      console.log(`[DIAGNOSTIC] VAD integration: Initializing WebAudioVad for state: "${currentState}"`);
       const vad = new WebAudioVad({
         speechThresholdMargin: 0.015,
         silenceDurationMs: 2000, // 2000ms pause tolerance for slow speakers (Scenario H)
@@ -412,32 +432,45 @@ export default function ActiveSurveyPage() {
 
       vad.initialize(null, {
         onSpeechStart: () => {
-          console.log("VAD: Speech started.");
+          console.log(`[DIAGNOSTIC] VAD: Speech started in state: "${currentState}"`);
         },
         onSpeechEnd: () => {
-          console.log("VAD: Speech ended. Auto-triggering FINISH_LISTENING.");
-          send({ type: 'FINISH_LISTENING' });
+          console.log(`[DIAGNOSTIC] VAD: Speech ended in state: "${currentState}".`);
+          if (currentState === 'CONFIRMING') {
+            console.log("[DIAGNOSTIC] VAD onSpeechEnd: calling stopListening manually for CONFIRMING state.");
+            stopListening();
+          } else {
+            console.log("[DIAGNOSTIC] VAD onSpeechEnd: dispatching FINISH_LISTENING for LISTENING state.");
+            send({ type: 'FINISH_LISTENING' });
+          }
         },
         onError: (err) => {
-          console.warn("VAD error:", err);
+          console.warn(`[DIAGNOSTIC] VAD error in state "${currentState}":`, err);
         }
       });
 
       vad.startDetection();
 
-      // Watchdog: auto-advance to PROCESSING after maxListeningDurationMs of LISTENING
+      // Watchdog: auto-advance to PROCESSING after maxListeningDurationMs
       const watchdogTimer = setTimeout(() => {
-        console.warn("VAD Watchdog: Max listening duration exceeded. Forcing transition to PROCESSING.");
-        send({ type: 'FINISH_LISTENING' });
+        console.warn(`[DIAGNOSTIC] VAD Watchdog: Max listening duration exceeded in state: "${currentState}".`);
+        if (currentState === 'CONFIRMING') {
+          console.log("[DIAGNOSTIC] VAD Watchdog: calling stopListening manually for CONFIRMING state.");
+          stopListening();
+        } else {
+          console.log("[DIAGNOSTIC] VAD Watchdog: dispatching FINISH_LISTENING for LISTENING state.");
+          send({ type: 'FINISH_LISTENING' });
+        }
       }, vad.getMaxListeningDurationMs());
 
       return () => {
+        console.log(`[DIAGNOSTIC] VAD integration: Cleanup WebAudioVad for state: "${currentState}"`);
         vad.stopDetection();
         vad.destroy();
         clearTimeout(watchdogTimer);
       };
     }
-  }, [currentState, isSelfGuided, send]);
+  }, [currentState, isSelfGuided, send, stopListening]);
 
   // 8. Session completion trigger
   useEffect(() => {
@@ -550,6 +583,7 @@ export default function ActiveSurveyPage() {
             candidateAnswer={candidateAnswer}
             onSendEvent={send}
             onSaveManualAnswer={handleSaveManualAnswer}
+            onConfirmYes={() => handleSaveAnswer(candidateAnswer)}
             onGoBack={() => {
               if (questionIndex > 0) {
                 const prevQ = survey.questions[questionIndex - 1];

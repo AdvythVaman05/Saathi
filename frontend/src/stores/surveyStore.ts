@@ -232,10 +232,11 @@ export const useSurveyStore = create<SurveyStateStore>((set, get) => {
     send: (event) => {
       const state = get();
       const current = state.currentState;
+      console.log(`[DIAGNOSTIC] FSM Store: Received event "${event.type}" in state "${current}". Payload:`, 'payload' in event ? event.payload : null);
 
       // Validate transition validity using guards
       if (!canTransition(current, event)) {
-        console.warn(`Invalid transition event ${event.type} in state ${current}`);
+        console.warn(`[DIAGNOSTIC] FSM Store: Invalid transition event ${event.type} in state ${current}`);
         return;
       }
 
@@ -291,6 +292,9 @@ export const useSurveyStore = create<SurveyStateStore>((set, get) => {
           targetState = 'COMPLETED';
         } else if (event.payload.nextQuestionId) {
           overrides.currentQuestionId = event.payload.nextQuestionId;
+          console.log(`[DIAGNOSTIC] FSM Store: CONFIRM_YES: Advancing currentQuestionId to "${event.payload.nextQuestionId}"`);
+        } else {
+          console.warn(`[DIAGNOSTIC] FSM Store: CONFIRM_YES received but nextQuestionId is undefined/null!`);
         }
       }
 
@@ -305,6 +309,7 @@ export const useSurveyStore = create<SurveyStateStore>((set, get) => {
         } else if (event.payload.nextQuestionId) {
           overrides.currentQuestionId = event.payload.nextQuestionId;
           targetState = 'QUESTION_READING';
+          console.log(`[DIAGNOSTIC] FSM Store: SUBMIT_MANUAL: Advancing currentQuestionId to "${event.payload.nextQuestionId}"`);
         }
       }
 
@@ -317,6 +322,8 @@ export const useSurveyStore = create<SurveyStateStore>((set, get) => {
       if (event.type === 'API_FAILURE') {
         overrides.lastError = event.payload.error;
       }
+
+      console.log(`[DIAGNOSTIC] FSM Store: Transitioning from "${current}" to "${targetState}". Overrides:`, overrides);
 
       // Execute Transition
       executeExitAction(current, targetState);

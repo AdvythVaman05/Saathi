@@ -270,6 +270,7 @@ interface ActiveQuestionLayoutProps {
   onSendEvent: (event: any) => void;
   onSaveManualAnswer: (val: unknown) => void;
   onGoBack: () => void;
+  onConfirmYes?: () => void;
 }
 
 export function ActiveQuestionLayout({
@@ -283,6 +284,7 @@ export function ActiveQuestionLayout({
   onSendEvent,
   onSaveManualAnswer,
   onGoBack,
+  onConfirmYes,
 }: ActiveQuestionLayoutProps) {
   const [manualInputValue, setManualInputValue] = useState<any>('');
   const textInputRef = useRef<HTMLTextAreaElement>(null);
@@ -378,7 +380,7 @@ export function ActiveQuestionLayout({
                 <Button
                   variant="accent"
                   className="flex-1"
-                  onClick={() => onSendEvent({ type: 'CONFIRM_YES', payload: { hasNextQuestion: questionIndex < totalQuestions - 1 } })}
+                  onClick={() => onConfirmYes?.()}
                   aria-label="Yes, confirm answer"
                 >
                   Yes

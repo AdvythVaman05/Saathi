@@ -19,6 +19,12 @@ export function useSpeechRecognition(config: SpeechRecognitionConfig) {
   const [activeProviderName, setActiveProviderName] = useState<'openai' | 'azure' | 'browser' | 'groq'>('groq');
   const managerRef = useRef<VoiceEngineManager | null>(null);
 
+  // Keep a mutable ref to hold the latest config object and prevent dependency churn
+  const configRef = useRef<SpeechRecognitionConfig>(config);
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
+
   // Initialize VoiceEngineManager
   useEffect(() => {
     const prefs = usePreferenceStore.getState();
@@ -39,12 +45,12 @@ export function useSpeechRecognition(config: SpeechRecognitionConfig) {
     const runStart = async () => {
       try {
         const provider = managerRef.current!.getRecognitionProvider();
-        await provider.initialize(config.lang, {
+        await provider.initialize(configRef.current.lang, {
           onStart: () => {
-            config.onStart?.();
+            configRef.current.onStart?.();
           },
           onResult: (res) => {
-            config.onResult(res.transcript, res.confidence);
+            configRef.current.onResult(res.transcript, res.confidence);
           },
           onError: async (err) => {
             console.error('Recognition provider error:', err);
@@ -65,27 +71,27 @@ export function useSpeechRecognition(config: SpeechRecognitionConfig) {
                 await provider.destroy();
                 runStart();
               } catch (fallbackErr) {
-                config.onError('All voice recognition engines exhausted.');
+                configRef.current.onError('All voice recognition engines exhausted.');
                 setIsListening(false);
               }
             } else {
-              config.onError(err.message);
+              configRef.current.onError(err.message);
               setIsListening(false);
             }
           },
           onEnd: () => {
-            config.onEnd?.();
+            configRef.current.onEnd?.();
           }
         });
         await provider.startListening();
       } catch (err: any) {
-        config.onError(err.message || 'Failed to start voice recognition.');
+        configRef.current.onError(err.message || 'Failed to start voice recognition.');
         setIsListening(false);
       }
     };
 
     runStart();
-  }, [config]);
+  }, []);
 
   const stopListening = useCallback(async () => {
     setIsListening(false);
