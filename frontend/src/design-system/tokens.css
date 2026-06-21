@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design Tokens stylesheet for Saathi */
+
+:root {
+  /* Standard Palette (Calm & Elegant Theme) */
+  --bg-primary: hsl(215, 25%, 12%);
+  --bg-secondary: hsl(215, 20%, 18%);
+  --text-primary: hsl(0, 0%, 98%);
+  --text-secondary: hsl(215, 15%, 75%);
+  --accent: hsl(210, 100%, 65%);
+  --accent-hover: hsl(210, 100%, 75%);
+  --focus-ring: hsl(45, 100%, 50%);
+
+  /* Border Radii */
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+}
+
+/* High Contrast: Dark Theme (Black & Yellow) */
+[data-theme="high-contrast-dark"] {
+  --bg-primary: #000000;
+  --bg-secondary: #121212;
+  --text-primary: #FFFF00;
+  --text-secondary: #FFFFFF;
+  --accent: #FFFF00;
+  --accent-hover: #FFFF66;
+  --focus-ring: #FFFF00;
+}
+
+/* High Contrast: Light Theme (White & Black) */
+[data-theme="high-contrast-light"] {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F3F4F6;
+  --text-primary: #000000;
+  --text-secondary: #1F2937;
+  --accent: #0000FF;
+  --accent-hover: #3333FF;
+  --focus-ring: #000000;
+}
+
+/* Accessibility Focus Ring Standards */
+*:focus-visible {
+  outline: 4px solid var(--focus-ring) !important;
+  outline-offset: 4px !important;
+}
+
+/* Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: scroll !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
