@@ -20,13 +20,12 @@ def health_check(request):
 
 def ready_check(request):
     """
-    Readiness probe (/ready) - validates DB, Redis, and OpenAI API key settings.
+    Readiness probe (/ready) - validates DB and Groq API key settings.
     """
     status_code = 200
     services = {
         "database": "ok",
-        "websocket_broker": "ok",
-        "openai_api": "ok"
+        "groq_api": "ok"
     }
 
     # 1. Database Check
@@ -39,19 +38,7 @@ def ready_check(request):
         services["database"] = f"error: {str(e)}"
         status_code = 503
 
-    # 2. Redis / Channels Layer Check
-    try:
-        import channels.layers
-        channel_layer = channels.layers.get_channel_layer()
-        if not channel_layer:
-            services["websocket_broker"] = "error: channel layer not configured"
-            status_code = 503
-    except Exception as e:
-        logger.error(f"Readiness check failed: Channels layer error: {str(e)}")
-        services["websocket_broker"] = f"error: {str(e)}"
-        status_code = 503
-
-    # 3. Groq Connectivity Check
+    # 2. Groq Connectivity Check
     groq_key = os.getenv("GROQ_API_KEY")
     if not groq_key:
         services["groq_api"] = "error: API key not configured"
@@ -60,7 +47,12 @@ def ready_check(request):
         # Perform quick network ping to Groq endpoint
         try:
             # Set timeout to 1.5 seconds to avoid blocking
-            urllib.request.urlopen("https://api.groq.com/openai/v1/models", timeout=1.5)
+            # Add User-Agent to avoid Cloudflare 403 blocks
+            req = urllib.request.Request(
+                "https://api.groq.com/openai/v1/models",
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+            urllib.request.urlopen(req, timeout=1.5)
         except urllib.error.HTTPError as e:
             # 401 Unauthorized is expected, but proves Groq is online and reachable!
             if e.code == 401:

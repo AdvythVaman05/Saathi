@@ -1,4 +1,2 @@
-# This ensures the celery app is loaded when Django starts.
-from .celery import app as celery_app
+# Saathi config package
 
-__all__ = ('celery_app',)

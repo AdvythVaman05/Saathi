@@ -36,6 +36,6 @@ Offline answers are persisted locally in Dexie IndexedDB instantly (<10ms). The 
 
 ## 3. Recommended Optimization Strategies
 
-1. **Edge Caching for Surveys:** Serve active survey definitions via Vercel CDN or Redis cache to keep `/api/surveys/list/<id>/` retrieval under **100ms** globally.
+1. **Edge Caching for Surveys:** Serve active survey definitions via Vercel CDN or database/edge-level caching to keep `/api/surveys/list/<id>/` retrieval under **100ms** globally.
 2. **Audio Buffer Downsampling:** Continue downsampling to **16kHz** on the client to keep uploads under **25 kB/second of speech**, minimizing latency on mobile cellular connections.
 3. **Local TTS Customization:** Since TTS uses browser-side synthesis, there are no network synthesis requests or server load. User preferences for voice rate, pitch, and specific regional voice profiles should be stored in local IndexedDB configurations to preserve accessibility settings.

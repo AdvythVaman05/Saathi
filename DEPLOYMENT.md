@@ -12,7 +12,6 @@ Below are the required environment configurations. A template is provided in [.e
 | Variable | Description | Default / Example |
 | :--- | :--- | :--- |
 | `DATABASE_URL` | PostgreSQL connection pool URL from Supabase | `postgres://postgres.xxx:5432/postgres` |
-| `REDIS_URL` | Redis connection URL for Channels and Celery | `redis://default:xxx@render.com:6379/0` |
 | `GROQ_API_KEY` | Server-side Groq API Key (isolated from browser) | `gsk_proj_xxx` |
 | `GROQ_WHISPER_MODEL` | Configurable model used for Whisper transcriptions | `whisper-large-v3` |
 | `DJANGO_SECRET_KEY` | Cryptographic signing key for Django | `secure-random-string` |
@@ -52,7 +51,7 @@ SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';
 To disable RLS and drop security boundaries, execute the commented rollback block at the bottom of the SQL script or see the instructions in [supabase/README.md](file:///d:/Project%20Netra/Saathi/supabase/README.md#3-rollback-steps).
 
 ### 2.2 Backend (Render)
-Render hosts the Django REST application and Daphne ASGI websocket server.
+Render hosts the Django REST application and Daphne ASGI server.
 
 1. Connect your repository to Render.
 2. Create a new **Web Service**, choosing **Python** environment.

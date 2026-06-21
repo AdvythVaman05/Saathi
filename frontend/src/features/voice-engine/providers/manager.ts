@@ -44,26 +44,13 @@ export class VoiceEngineManager {
   /**
    * Fallback management service logic.
    * Groq falls back directly to Manual Response Mode by throwing a fatal error.
-   * OpenAI and Azure escalate normally for backward compatibility.
    */
   triggerFallback(): VoiceProviderType {
     const current = this.activeProvider;
-    let next: VoiceProviderType;
-
     if (current === 'groq') {
       throw new Error('Groq speech recognition exhausted. Falling back to Manual Response Mode.');
-    } else if (current === 'openai') {
-      next = 'azure';
-    } else if (current === 'azure') {
-      next = 'browser';
-    } else {
-      throw new Error('All speech providers exhausted. Voice engine failed.');
     }
-
-
-    this.activeProvider = next;
-    this.retryCount = 0; // Reset retries on escalation
-    return next;
+    throw new Error('All speech providers exhausted. Voice engine failed.');
   }
 
 

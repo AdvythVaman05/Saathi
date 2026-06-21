@@ -45,7 +45,7 @@ This document presents a comprehensive security audit and review for the pilot d
 | :--- | :--- | :---: | :--- |
 | **SEC-1** | **Unsigned Session IDs** | **Medium** | While `session_id` is a random UUID, it is not cryptographically signed. A malicious actor could guess or brute-force session IDs to fetch metadata if RLS policies are misconfigured. |
 | **SEC-2** | **Anonymous Telemetry Abuse** | **Low** | Since the `/api/responses/telemetry/` endpoint is accessible without authentication to support anonymous participants, an attacker could flood it to bloat database storage. |
-| **SEC-3** | **WebSocket Denial of Service** | **Medium** | High volumes of concurrent WebSocket connections could exhaust Daphne's event loops or exhaust the Redis Channel Layer connections. |
+| **SEC-3** | **WebSocket Denial of Service** | **Resolved** | Resolved via architectural simplification. WebSockets, Django Channels, and Redis have been completely removed from the stack, eliminating WebSocket DDoS vectors. |
 
 ---
 
@@ -53,10 +53,10 @@ This document presents a comprehensive security audit and review for the pilot d
 
 ### 3.1 Signed JWT Session Tokens
 Transition from raw UUIDs to cryptographically signed JSON Web Tokens (JWT) issued by `/api/responses/sessions/start/`.
-- **Benefit:** The ASGI WebSocket server can verify the signature of the session token immediately using the `SECRET_KEY` without making a blocking database query, eliminating database load on connection handshakes.
+- **Benefit:** The backend REST server can verify the signature of the session token immediately using the `SECRET_KEY` without making a blocking database query, eliminating database load on REST calls.
 
 ### 3.2 Authenticated User Binding
 Integrate Supabase Auth or standard Django user auth to bind sessions to verified user accounts (for researchers/administrators), enforcing strict Row Level Security (RLS) policies on Django and Supabase.
 
 ### 3.3 CDN Web Application Firewall (WAF)
-Place the application behind Cloudflare or Vercel WAF to block malicious bots, rate limit traffic at the edge, and mitigate DDoS attacks before they reach the backend Daphne servers.
+Place the application behind Cloudflare or Vercel WAF to block malicious bots, rate limit traffic at the edge, and mitigate DDoS attacks before they reach the backend servers.

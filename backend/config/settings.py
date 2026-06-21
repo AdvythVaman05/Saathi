@@ -29,7 +29,6 @@ INSTALLED_APPS = [
     # Third-party packages
     'rest_framework',
     'corsheaders',
-    'channels',
     
     # Local Apps
     'apps.users',
@@ -177,29 +176,6 @@ REST_FRAMEWORK = {
         'telemetry': '1000/min',
     }
 }
-
-# Django Channels Configuration (Redis Layer)
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [REDIS_URL],
-        },
-    },
-}
-
-# Celery Configuration
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-
-# Voice Engine Settings
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-AZURE_SPEECH_KEY = os.getenv('AZURE_SPEECH_KEY')
-AZURE_SPEECH_REGION = os.getenv('AZURE_SPEECH_REGION', 'eastus')
 
 # Centralized Logging Configuration (Structured JSON)
 LOGGING = {

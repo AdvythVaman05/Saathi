@@ -1,4 +1,4 @@
-export type VoiceProviderType = 'openai' | 'azure' | 'browser' | 'groq';
+export type VoiceProviderType = 'browser' | 'groq';
 
 export interface VoiceEngineConfig {
   preferredProvider: VoiceProviderType;

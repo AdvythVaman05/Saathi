@@ -1,7 +1,5 @@
 import { SpeechRecognitionProvider } from '../transcription/recognition';
 import { SpeechSynthesisProvider } from '../synthesis/synthesis';
-import { OpenAiSpeechRecognitionProvider, OpenAiSpeechSynthesisProvider } from './openai';
-import { AzureSpeechRecognitionProvider, AzureSpeechSynthesisProvider } from './azure';
 import { BrowserSpeechRecognitionProvider, BrowserSpeechSynthesisProvider } from './browser';
 import { GroqSpeechRecognitionProvider } from './groq';
 
@@ -35,16 +33,6 @@ registerRecognitionProvider('groq', new GroqSpeechRecognitionProvider());
 
 // Default Text-to-Speech Provider
 registerSynthesisProvider('browser', new BrowserSpeechSynthesisProvider());
-
-// Deprecated Cloud Providers (retained for future reactivation if required)
-// @deprecated
-registerRecognitionProvider('openai', new OpenAiSpeechRecognitionProvider());
-// @deprecated
-registerSynthesisProvider('openai', new OpenAiSpeechSynthesisProvider());
-// @deprecated
-registerRecognitionProvider('azure', new AzureSpeechRecognitionProvider());
-// @deprecated
-registerSynthesisProvider('azure', new AzureSpeechSynthesisProvider());
 
 // Browser Web Speech recognition fallback
 registerRecognitionProvider('browser', new BrowserSpeechRecognitionProvider());

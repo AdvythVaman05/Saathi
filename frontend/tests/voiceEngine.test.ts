@@ -3,23 +3,6 @@ import { registerRecognitionProvider, providerRegistry } from '../src/features/v
 import { SpeechRecognitionProvider } from '../src/features/voice-engine/transcription/recognition';
 import { VoiceCommandProcessor } from '../src/features/voice-engine/commands/processor';
 
-// 1. Mock Recognition Adapters
-const mockOpenAiProvider: SpeechRecognitionProvider = {
-  name: 'openai',
-  initialize: async () => {},
-  startListening: async () => {},
-  stopListening: async () => {},
-  destroy: async () => {},
-};
-
-const mockAzureProvider: SpeechRecognitionProvider = {
-  name: 'azure',
-  initialize: async () => {},
-  startListening: async () => {},
-  stopListening: async () => {},
-  destroy: async () => {},
-};
-
 const mockBrowserProvider: SpeechRecognitionProvider = {
   name: 'browser',
   initialize: async () => {},
@@ -32,47 +15,34 @@ describe('Saathi Voice Engine Abstraction Layer Unit Tests', () => {
   
   beforeAll(() => {
     // Register Mock providers into global registry
-    registerRecognitionProvider('openai', mockOpenAiProvider);
-    registerRecognitionProvider('azure', mockAzureProvider);
     registerRecognitionProvider('browser', mockBrowserProvider);
   });
 
   describe('Provider Selection & Fallback Management', () => {
     test('Should initialize with preferred provider', () => {
       const manager = new VoiceEngineManager({
-        preferredProvider: 'openai',
+        preferredProvider: 'groq',
         lang: 'en',
         confidenceThreshold: 0.80,
       });
 
-      expect(manager.getActiveProviderName()).toBe('openai');
-      expect(manager.getRecognitionProvider().name).toBe('openai');
+      expect(manager.getActiveProviderName()).toBe('groq');
+      expect(manager.getRecognitionProvider().name).toBe('groq');
     });
 
-    test('Should escalate in order: OpenAI -> Azure -> Browser', () => {
+    test('Should throw fatal error when Groq fallback is triggered', () => {
       const manager = new VoiceEngineManager({
-        preferredProvider: 'openai',
+        preferredProvider: 'groq',
         lang: 'en',
         confidenceThreshold: 0.80,
       });
 
-      // Escalation 1
-      const p1 = manager.triggerFallback();
-      expect(p1).toBe('azure');
-      expect(manager.getRecognitionProvider().name).toBe('azure');
-
-      // Escalation 2
-      const p2 = manager.triggerFallback();
-      expect(p2).toBe('browser');
-      expect(manager.getRecognitionProvider().name).toBe('browser');
-
-      // Escalation 3 (All exhausted)
-      expect(() => manager.triggerFallback()).toThrow('All speech providers exhausted. Voice engine failed.');
+      expect(() => manager.triggerFallback()).toThrow('Groq speech recognition exhausted. Falling back to Manual Response Mode.');
     });
 
     test('Should retry transient errors before triggering fallback', () => {
       const manager = new VoiceEngineManager({
-        preferredProvider: 'openai',
+        preferredProvider: 'groq',
         lang: 'en',
         confidenceThreshold: 0.80,
       });
@@ -101,7 +71,7 @@ describe('Saathi Voice Engine Abstraction Layer Unit Tests', () => {
 
     test('Should immediately trigger fallback on auth failures', () => {
       const manager = new VoiceEngineManager({
-        preferredProvider: 'openai',
+        preferredProvider: 'groq',
         lang: 'en',
         confidenceThreshold: 0.80,
       });
@@ -218,12 +188,8 @@ describe('Saathi Voice Engine Abstraction Layer Unit Tests', () => {
     const { providerRegistry } = require('../src/features/voice-engine/providers/registry');
 
     test('Registry should contain concrete adapters by default', () => {
-      expect(providerRegistry.recognition.openai).toBeDefined();
-      expect(providerRegistry.recognition.azure).toBeDefined();
+      expect(providerRegistry.recognition.groq).toBeDefined();
       expect(providerRegistry.recognition.browser).toBeDefined();
-
-      expect(providerRegistry.synthesis.openai).toBeDefined();
-      expect(providerRegistry.synthesis.azure).toBeDefined();
       expect(providerRegistry.synthesis.browser).toBeDefined();
     });
 
@@ -242,42 +208,6 @@ describe('Saathi Voice Engine Abstraction Layer Unit Tests', () => {
       });
 
       browserProvider.startListening();
-    });
-
-    test('Azure adapter recognition should return mock result in Node.js runtime', (done) => {
-      const { AzureSpeechRecognitionProvider } = require('../src/features/voice-engine/providers/azure');
-      const azureProvider = new AzureSpeechRecognitionProvider();
-      
-      azureProvider.initialize('hi', {
-        onStart: () => {},
-        onResult: (result: any) => {
-          expect(result.transcript).toBe('repeat');
-          expect(result.confidence).toBe(0.92);
-          done();
-        },
-        onError: (err: any) => done(err),
-      });
-
-      azureProvider.startListening();
-      azureProvider.stopListening();
-    });
-
-    test('OpenAI adapter recognition should return mock result in Node.js runtime', (done) => {
-      const { OpenAiSpeechRecognitionProvider } = require('../src/features/voice-engine/providers/openai');
-      const openaiProvider = new OpenAiSpeechRecognitionProvider();
-      
-      openaiProvider.initialize('te', {
-        onStart: () => {},
-        onResult: (result: any) => {
-          expect(result.transcript).toBe('back');
-          expect(result.confidence).toBe(0.94);
-          done();
-        },
-        onError: (err: any) => done(err),
-      });
-
-      openaiProvider.startListening();
-      openaiProvider.stopListening();
     });
   });
 });
